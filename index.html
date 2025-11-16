@@ -243,8 +243,13 @@ th {
   text-align: left;
   font-weight: 600;
   font-size: 14px;
-  white-space: nowrap;
+  white-space: normal; /* ✅ 允許換行 */
+  word-wrap: break-word; /* ✅ 允許單字斷行 */
+  word-break: break-word; /* ✅ 強制長單字斷行 */
+  line-height: 1.4; /* ✅ 行高 */
+  vertical-align: middle; /* ✅ 垂直置中 */
 }
+
 
 td {
   padding: 12px;
