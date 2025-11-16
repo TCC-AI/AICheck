@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>資料編輯 - AI 工作職掌系統</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
+      background-size: 400% 400%;
+      animation: gradientShift 15s ease infinite;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      background: rgba(255, 255, 255, 0.95);
+      border-radius: 25px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+    }
+
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 25px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .header-title h1 {
+      font-size: 24px;
+      margin-bottom: 5px;
+    }
+
+    .header-title p {
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn-logout {
+      background: #ff6b6b;
+      color: white;
+    }
+
+    .btn-change-pwd {
+      background: #4ecdc4;
+      color: white;
+    }
+
+    .content {
+      padding: 30px;
+    }
+
+    .table-container {
+      overflow-x: auto;
+      border-radius: 15px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      margin-bottom: 25px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: white;
+      min-width: 800px;
+    }
+
+    thead {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    th {
+      padding: 15px 12px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 12px;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 14px;
+    }
+
+    tbody tr:hover {
+      background: #f8f9ff;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    .editable-cell select,
+    .editable-cell textarea {
+      width: 100%;
+      padding: 8px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      transition: all 0.3s ease;
+    }
+
+    .editable-cell select:focus,
+    .editable-cell textarea:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .editable-cell textarea {
+      min-height: 60px;
+      resize: vertical;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn-submit {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 14px 35px;
+      font-size: 16px;
+    }
+
+    .btn-reset {
+      background: #95a5a6;
+      color: white;
+      padding: 14px 35px;
+      font-size: 16px;
+    }
+
+    .message {
+      padding: 15px 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      display: none;
+      animation: slideDown 0.3s ease;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .message.success {
+      background: #d4edda;
+      color: #155724;
+      border-left: 4px solid #28a745;
+    }
+
+    .message.error {
+      background: #f8d7da;
+      color: #721c24;
+      border-left: 4px solid #dc3545;
+    }
+
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+
+    .loading-content {
+      background: white;
+      padding: 30px 50px;
+      border-radius: 15px;
+      text-align: center;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 15px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @media (max-width: 768px) {
+      .header {
+        padding: 20px;
+      }
+
+      .header-title h1 {
+        font-size: 20px;
+      }
+
+      .content {
+        padding: 20px 15px;
+      }
+
+      .btn {
+        padding: 8px 16px;
+        font-size: 13px;
+      }
+
+      .btn-submit, .btn-reset {
+        padding: 12px 25px;
+        font-size: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-content">
+      <div class="spinner"></div>
+      <p>處理中，請稍候...</p>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="header">
+      <div class="header-title">
+        <h1>🤖 AI 工作職掌資料編輯</h1>
+        <p>歡迎，<span id="userName"></span>（<span id="employeeId"></span>）</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-change-pwd" onclick="changePassword()">🔑 更改密碼</button>
+        <button class="btn btn-logout" onclick="logout()">🚪 登出</button>
+      </div>
+    </div>
+
+    <div class="content">
+      <div id="message" class="message"></div>
+
+      <div class="table-container">
+        <table id="dataTable">
+          <thead>
+            <tr id="tableHeader"></tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+
+      <div class="action-buttons">
+        <button class="btn btn-submit" onclick="submitData()">💾 資料送出</button>
+        <button class="btn btn-reset" onclick="resetData()">🔄 資料重填</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let originalData = [];
+    let currentData = [];
+
+    // 頁面載入時初始化
+    window.onload = function() {
+      const employeeId = sessionStorage.getItem('employeeId');
+      const userName = sessionStorage.getItem('userName');
+
+      if (!employeeId) {
+        window.location.href = '<?= ScriptApp.getService().getUrl() ?>';
+        return;
+      }
+
+      document.getElementById('employeeId').textContent = employeeId;
+      document.getElementById('userName').textContent = userName || '使用者';
+
+      loadData();
+    };
+
+    // 載入資料
+    function loadData() {
+      showLoading(true);
+      const employeeId = sessionStorage.getItem('employeeId');
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            originalData = JSON.parse(JSON.stringify(result.data));
+            currentData = result.data;
+            renderTable(result.headers, result.data);
+          } else {
+            showMessage(result.message, 'error');
+          }
+          showLoading(false);
+        })
+        .withFailureHandler(function(error) {
+          showMessage('載入資料失敗', 'error');
+          showLoading(false);
+        })
+        .getUserData(employeeId);
+    }
+
+    // 渲染表格
+    function renderTable(headers, data) {
+      const headerRow = document.getElementById('tableHeader');
+      const tbody = document.getElementById('tableBody');
+
+      // 清空表格
+      headerRow.innerHTML = '';
+      tbody.innerHTML = '';
+
+      // 建立表頭
+      headers.forEach(header => {
+        const th = document.createElement('th');
+        th.textContent = header;
+        headerRow.appendChild(th);
+      });
+
+      // 建立表格內容
+      data.forEach((row, index) => {
+        const tr = document.createElement('tr');
+
+        // A 欄位：工號
+        const tdEmployeeId = document.createElement('td');
+        tdEmployeeId.textContent = row.employeeId;
+        tr.appendChild(tdEmployeeId);
+
+        // B 欄位：姓名
+        const tdName = document.createElement('td');
+        tdName.textContent = row.name;
+        tr.appendChild(tdName);
+
+        // C 欄位：職位
+        const tdPosition = document.createElement('td');
+        tdPosition.textContent = row.position;
+        tr.appendChild(tdPosition);
+
+        // D 欄位：項次
+        const tdItemNumber = document.createElement('td');
+        tdItemNumber.textContent = row.itemNumber;
+        tr.appendChild(tdItemNumber);
+
+        // E 欄位：工作內容
+        const tdWorkContent = document.createElement('td');
+        tdWorkContent.textContent = row.workContent;
+        tdWorkContent.style.maxWidth = '300px';
+        tr.appendChild(tdWorkContent);
+
+        // F 欄位：AI自評（下拉選單）
+        const tdAiSelfEval = document.createElement('td');
+        tdAiSelfEval.className = 'editable-cell';
+        const select = document.createElement('select');
+        select.dataset.index = index;
+        select.onchange = function() {
+          currentData[this.dataset.index].aiSelfEval = this.value;
+        };
+
+        const options = ['請選擇', '0', '1', '2', '3', '4', '5'];
+        options.forEach(opt => {
+          const option = document.createElement('option');
+          option.value = opt === '請選擇' ? '' : opt;
+          option.textContent = opt;
+          if ((row.aiSelfEval === '' || row.aiSelfEval === 0) && opt === '請選擇') {
+            option.selected = true;
+          } else if (row.aiSelfEval == opt) {
+            option.selected = true;
+          }
+          select.appendChild(option);
+        });
+
+        tdAiSelfEval.appendChild(select);
+        tr.appendChild(tdAiSelfEval);
+
+        // G 欄位：實例說明（文字區域）
+        const tdExample = document.createElement('td');
+        tdExample.className = 'editable-cell';
+        const textarea = document.createElement('textarea');
+        textarea.value = row.example || '';
+        textarea.dataset.index = index;
+        textarea.oninput = function() {
+          currentData[this.dataset.index].example = this.value;
+        };
+        tdExample.appendChild(textarea);
+        tr.appendChild(tdExample);
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    // 送出資料
+    function submitData() {
+      if (!confirm('確定要送出資料嗎？')) {
+        return;
+      }
+
+      showLoading(true);
+      const employeeId = sessionStorage.getItem('employeeId');
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            showMessage(result.message, 'success');
+            originalData = JSON.parse(JSON.stringify(currentData));
+          } else {
+            showMessage(result.message, 'error');
+          }
+          showLoading(false);
+        })
+        .withFailureHandler(function(error) {
+          showMessage('儲存失敗', 'error');
+          showLoading(false);
+        })
+        .saveUserData(employeeId, currentData);
+    }
+
+    // 重填資料
+    function resetData() {
+      if (!confirm('確定要重填資料嗎？這將清除您目前的編輯內容。')) {
+        return;
+      }
+
+      currentData = JSON.parse(JSON.stringify(originalData));
+      
+      // 重新渲染表格
+      const headers = Array.from(document.querySelectorAll('#tableHeader th')).map(th => th.textContent);
+      renderTable(headers, currentData);
+      
+      showMessage('資料已重填', 'success');
+    }
+
+    // 更改密碼
+    function changePassword() {
+      const newPassword = prompt('請輸入新密碼：');
+      if (!newPassword) return;
+
+      const confirmPassword = prompt('請再次輸入新密碼：');
+      if (!confirmPassword) return;
+
+      showLoading(true);
+      const employeeId = sessionStorage.getItem('employeeId');
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          showLoading(false);
+          alert(result.message);
+          if (result.success) {
+            logout();
+          }
+        })
+        .withFailureHandler(function(error) {
+          showLoading(false);
+          alert('更改密碼失敗');
+        })
+        .changePassword(employeeId, newPassword, confirmPassword);
+    }
+
+    // 登出
+    function logout() {
+      sessionStorage.clear();
+      window.location.href = '<?= ScriptApp.getService().getUrl() ?>';
+    }
+
+    // 顯示訊息
+    function showMessage(text, type) {
+      const messageDiv = document.getElementById('message');
+      messageDiv.textContent = text;
+      messageDiv.className = 'message ' + type;
+      messageDiv.style.display = 'block';
+
+      setTimeout(() => {
+        messageDiv.style.display = 'none';
+      }, 5000);
+    }
+
+    // 顯示載入狀態
+    function showLoading(show) {
+      document.getElementById('loadingOverlay').style.display = show ? 'flex' : 'none';
+    }
+  </script>
+</body>
+</html>
