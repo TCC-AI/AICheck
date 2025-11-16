@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登入 - AI 工作職掌系統</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Microsoft JhengHei', 'Segoe UI', Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #4facfe 75%, #00f2fe 100%);
+      background-size: 400% 400%;
+      animation: gradientShift 15s ease infinite;
+    }
+
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .login-container {
+      background: rgba(255, 255, 255, 0.95);
+      padding: 50px 40px;
+      border-radius: 25px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      width: 90%;
+      max-width: 420px;
+      backdrop-filter: blur(10px);
+      animation: fadeIn 0.6s ease;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .login-title {
+      text-align: center;
+      margin-bottom: 40px;
+      color: #333;
+    }
+
+    .login-title h1 {
+      font-size: 28px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 10px;
+    }
+
+    .login-title p {
+      font-size: 14px;
+      color: #666;
+    }
+
+    .form-group {
+      margin-bottom: 25px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #555;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 14px 18px;
+      border: 2px solid #e0e0e0;
+      border-radius: 12px;
+      font-size: 15px;
+      transition: all 0.3s ease;
+      background: #f8f9fa;
+    }
+
+    .form-group input:focus {
+      outline: none;
+      border-color: #667eea;
+      background: white;
+      box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 15px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+      margin-top: 10px;
+    }
+
+    .login-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px rgba(102, 126, 234, 0.4);
+    }
+
+    .login-btn:active {
+      transform: translateY(0);
+    }
+
+    .login-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .error-message {
+      background: #fee;
+      color: #c33;
+      padding: 12px 16px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      display: none;
+      border-left: 4px solid #c33;
+    }
+
+    .loading {
+      text-align: center;
+      color: #667eea;
+      margin-top: 15px;
+      display: none;
+      font-size: 14px;
+    }
+
+    @media (max-width: 480px) {
+      .login-container {
+        padding: 35px 25px;
+      }
+
+      .login-title h1 {
+        font-size: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-title">
+      <h1>🤖 AI 工作職掌系統</h1>
+      <p>請使用您的工號和密碼登入</p>
+    </div>
+
+    <div id="errorMessage" class="error-message"></div>
+
+    <form id="loginForm" onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <label for="employeeId">工號</label>
+        <input type="text" id="employeeId" required placeholder="請輸入工號">
+      </div>
+
+      <div class="form-group">
+        <label for="password">密碼</label>
+        <input type="password" id="password" required placeholder="請輸入密碼">
+      </div>
+
+      <button type="submit" class="login-btn" id="loginBtn">登入</button>
+      <div class="loading" id="loading">登入中，請稍候...</div>
+    </form>
+  </div>
+
+  <script>
+    function handleLogin(event) {
+      event.preventDefault();
+      
+      const employeeId = document.getElementById('employeeId').value.trim();
+      const password = document.getElementById('password').value;
+      const errorDiv = document.getElementById('errorMessage');
+      const loginBtn = document.getElementById('loginBtn');
+      const loading = document.getElementById('loading');
+      
+      // 清除錯誤訊息
+      errorDiv.style.display = 'none';
+      errorDiv.textContent = '';
+      
+      // 顯示載入狀態
+      loginBtn.disabled = true;
+      loading.style.display = 'block';
+      
+      // 呼叫後端驗證
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            // 儲存使用者資訊到 sessionStorage
+            sessionStorage.setItem('employeeId', result.employeeId);
+            sessionStorage.setItem('userName', result.name);
+            
+            // 跳轉到主頁面
+            window.location.href = '<?= ScriptApp.getService().getUrl() ?>?page=main';
+          } else {
+            errorDiv.textContent = result.message;
+            errorDiv.style.display = 'block';
+            loginBtn.disabled = false;
+            loading.style.display = 'none';
+          }
+        })
+        .withFailureHandler(function(error) {
+          errorDiv.textContent = '系統錯誤，請稍後再試';
+          errorDiv.style.display = 'block';
+          loginBtn.disabled = false;
+          loading.style.display = 'none';
+        })
+        .verifyLogin(employeeId, password);
+    }
+  </script>
+</body>
+</html>
