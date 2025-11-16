@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <base target="_top">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AI 工作職掌系統</title>
@@ -388,7 +387,7 @@
   <div class="loading-overlay" id="loadingOverlay">
     <div class="loading-content">
       <div class="spinner"></div>
-      <p>處理中，請稍候...</p>
+      <p>處理中,請稍候...</p>
     </div>
   </div>
 
@@ -453,22 +452,69 @@
   </div>
 
   <script>
+    // ========== 設定後端 API 網址 ==========
+    // 👇 請替換成您的 Google Apps Script 部署網址
+    const API_URL = 'https://script.google.com/macros/s/AKfycbzmkvqxQQy5PtYAaRKjHXRydj7C9yGOosypQsRCVkR2_0oh4zukpDBs61rof1QMoNDvoA/exec';
+
     // ========== 全域變數 ==========
     let originalData = [];
     let currentData = [];
     let currentEmployeeId = '';
 
+    // ========== API 呼叫函數 ==========
+    async function callAPI(action, data = {}) {
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          mode: 'no-cors', // 重要：處理 CORS 問題
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            action: action,
+            ...data
+          })
+        });
+
+        // 因為使用 no-cors，無法讀取回應
+        // 所以改用 redirect 方式
+        return { success: true };
+      } catch (error) {
+        console.error('API Error:', error);
+        throw error;
+      }
+    }
+
+    // ========== 改用可讀取回應的方式 ==========
+    async function callAPIWithResponse(action, data = {}) {
+      try {
+        const response = await fetch(API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'text/plain', // 改用 text/plain 避免 preflight
+          },
+          body: JSON.stringify({
+            action: action,
+            ...data
+          })
+        });
+
+        const result = await response.json();
+        return result;
+      } catch (error) {
+        console.error('API Error:', error);
+        return { success: false, message: '連線失敗，請檢查網路' };
+      }
+    }
+
     // ========== 頁面初始化 ==========
     window.onload = function() {
-      // 檢查是否已登入
       const employeeId = sessionStorage.getItem('employeeId');
       const userName = sessionStorage.getItem('userName');
 
       if (employeeId) {
-        // 已登入，顯示主頁面
         showMainPage(employeeId, userName);
       } else {
-        // 未登入，顯示登入頁面
         showLoginPage();
       }
     };
@@ -492,64 +538,61 @@
     }
 
     // ========== 登入處理 ==========
-    function handleLogin(event) {
+    async function handleLogin(event) {
       event.preventDefault();
       
       const employeeId = document.getElementById('employeeId').value.trim();
       const password = document.getElementById('password').value;
       const loginBtn = document.getElementById('loginBtn');
       
-      // 清除錯誤訊息
       hideMessage('loginMessage');
       
-      // 顯示載入狀態
       loginBtn.disabled = true;
       loginBtn.textContent = '登入中...';
       
-      // 呼叫後端驗證
-      google.script.run
-        .withSuccessHandler(function(result) {
-          if (result.success) {
-            // 儲存使用者資訊
-            sessionStorage.setItem('employeeId', result.employeeId);
-            sessionStorage.setItem('userName', result.name);
-            
-            // 顯示主頁面
-            showMainPage(result.employeeId, result.name);
-          } else {
-            showMessage('loginMessage', result.message, 'error');
-            loginBtn.disabled = false;
-            loginBtn.textContent = '登入';
-          }
-        })
-        .withFailureHandler(function(error) {
-          showMessage('loginMessage', '系統錯誤，請稍後再試', 'error');
+      try {
+        const result = await callAPIWithResponse('login', {
+          employeeId: employeeId,
+          password: password
+        });
+
+        if (result.success) {
+          sessionStorage.setItem('employeeId', result.employeeId);
+          sessionStorage.setItem('userName', result.name);
+          showMainPage(result.employeeId, result.name);
+        } else {
+          showMessage('loginMessage', result.message, 'error');
           loginBtn.disabled = false;
           loginBtn.textContent = '登入';
-        })
-        .verifyLogin(employeeId, password);
+        }
+      } catch (error) {
+        showMessage('loginMessage', '系統錯誤，請稍後再試', 'error');
+        loginBtn.disabled = false;
+        loginBtn.textContent = '登入';
+      }
     }
 
     // ========== 載入資料 ==========
-    function loadData() {
+    async function loadData() {
       showLoading(true);
 
-      google.script.run
-        .withSuccessHandler(function(result) {
-          if (result.success) {
-            originalData = JSON.parse(JSON.stringify(result.data));
-            currentData = result.data;
-            renderTable(result.headers, result.data);
-          } else {
-            showMessage('mainMessage', result.message, 'error');
-          }
-          showLoading(false);
-        })
-        .withFailureHandler(function(error) {
-          showMessage('mainMessage', '載入資料失敗', 'error');
-          showLoading(false);
-        })
-        .getUserData(currentEmployeeId);
+      try {
+        const result = await callAPIWithResponse('getUserData', {
+          employeeId: currentEmployeeId
+        });
+
+        if (result.success) {
+          originalData = JSON.parse(JSON.stringify(result.data));
+          currentData = result.data;
+          renderTable(result.headers, result.data);
+        } else {
+          showMessage('mainMessage', result.message, 'error');
+        }
+      } catch (error) {
+        showMessage('mainMessage', '載入資料失敗', 'error');
+      }
+
+      showLoading(false);
     }
 
     // ========== 渲染表格 ==========
@@ -557,48 +600,39 @@
       const headerRow = document.getElementById('tableHeader');
       const tbody = document.getElementById('tableBody');
 
-      // 清空表格
       headerRow.innerHTML = '';
       tbody.innerHTML = '';
 
-      // 建立表頭
       headers.forEach(header => {
         const th = document.createElement('th');
         th.textContent = header;
         headerRow.appendChild(th);
       });
 
-      // 建立表格內容
       data.forEach((row, index) => {
         const tr = document.createElement('tr');
 
-        // A 欄位：工號
         const tdEmployeeId = document.createElement('td');
         tdEmployeeId.textContent = row.employeeId;
         tr.appendChild(tdEmployeeId);
 
-        // B 欄位：姓名
         const tdName = document.createElement('td');
         tdName.textContent = row.name;
         tr.appendChild(tdName);
 
-        // C 欄位：職位
         const tdPosition = document.createElement('td');
         tdPosition.textContent = row.position;
         tr.appendChild(tdPosition);
 
-        // D 欄位：項次
         const tdItemNumber = document.createElement('td');
         tdItemNumber.textContent = row.itemNumber;
         tr.appendChild(tdItemNumber);
 
-        // E 欄位：工作內容
         const tdWorkContent = document.createElement('td');
         tdWorkContent.textContent = row.workContent;
         tdWorkContent.style.maxWidth = '300px';
         tr.appendChild(tdWorkContent);
 
-        // F 欄位：AI自評（下拉選單）
         const tdAiSelfEval = document.createElement('td');
         tdAiSelfEval.className = 'editable-cell';
         const select = document.createElement('select');
@@ -623,7 +657,6 @@
         tdAiSelfEval.appendChild(select);
         tr.appendChild(tdAiSelfEval);
 
-        // G 欄位：實例說明（文字區域）
         const tdExample = document.createElement('td');
         tdExample.className = 'editable-cell';
         const textarea = document.createElement('textarea');
@@ -640,28 +673,30 @@
     }
 
     // ========== 送出資料 ==========
-    function submitData() {
+    async function submitData() {
       if (!confirm('確定要送出資料嗎？')) {
         return;
       }
 
       showLoading(true);
 
-      google.script.run
-        .withSuccessHandler(function(result) {
-          if (result.success) {
-            showMessage('mainMessage', result.message, 'success');
-            originalData = JSON.parse(JSON.stringify(currentData));
-          } else {
-            showMessage('mainMessage', result.message, 'error');
-          }
-          showLoading(false);
-        })
-        .withFailureHandler(function(error) {
-          showMessage('mainMessage', '儲存失敗', 'error');
-          showLoading(false);
-        })
-        .saveUserData(currentEmployeeId, currentData);
+      try {
+        const result = await callAPIWithResponse('saveUserData', {
+          employeeId: currentEmployeeId,
+          dataArray: currentData
+        });
+
+        if (result.success) {
+          showMessage('mainMessage', result.message, 'success');
+          originalData = JSON.parse(JSON.stringify(currentData));
+        } else {
+          showMessage('mainMessage', result.message, 'error');
+        }
+      } catch (error) {
+        showMessage('mainMessage', '儲存失敗', 'error');
+      }
+
+      showLoading(false);
     }
 
     // ========== 重填資料 ==========
@@ -679,7 +714,7 @@
     }
 
     // ========== 更改密碼 ==========
-    function changePassword() {
+    async function changePassword() {
       const newPassword = prompt('請輸入新密碼：');
       if (!newPassword) return;
 
@@ -688,19 +723,22 @@
 
       showLoading(true);
 
-      google.script.run
-        .withSuccessHandler(function(result) {
-          showLoading(false);
-          alert(result.message);
-          if (result.success) {
-            logout();
-          }
-        })
-        .withFailureHandler(function(error) {
-          showLoading(false);
-          alert('更改密碼失敗');
-        })
-        .changePassword(currentEmployeeId, newPassword, confirmPassword);
+      try {
+        const result = await callAPIWithResponse('changePassword', {
+          employeeId: currentEmployeeId,
+          newPassword: newPassword,
+          confirmPassword: confirmPassword
+        });
+
+        alert(result.message);
+        if (result.success) {
+          logout();
+        }
+      } catch (error) {
+        alert('更改密碼失敗');
+      }
+
+      showLoading(false);
     }
 
     // ========== 登出 ==========
@@ -710,7 +748,6 @@
       originalData = [];
       currentData = [];
       
-      // 清空表單
       document.getElementById('employeeId').value = '';
       document.getElementById('password').value = '';
       
